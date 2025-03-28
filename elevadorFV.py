@@ -1,49 +1,9 @@
-import os
+# -*- coding: utf-8 -*-
+from threading import *
 import time
 import random
-from threading import *
 from collections import defaultdict
 
-# Definir el número de pisos para la animacion inicial
-PISOS = 9  # Comenzamos desde el piso 9 para la animacion (HILEVADOR)
-PALABRA = "HILEVADOR"  # La palabra que se formará
-
-# Colores
-RESET = "\033[0m"
-AZUL = "\033[1;34m"
-VERDE = "\033[1;32m"
-CYAN = "\033[1;36m"
-
-# Función para dibujar el ascensor
-def dibujarAscensor(pisoActual, palabra):
-    os.system("clear")  # Limpiar la terminal
-
-    for i in range(PISOS, 0, -1):
-        if i == pisoActual:
-            # Piso actual en azul
-            print(f"{AZUL} [ ]  |  Piso {i} {palabra} {RESET}")
-        elif i != pisoActual:
-            # Pisos no utilizados en cyan
-            print(f"{CYAN}      |  Piso {i}{RESET}")
-
-# Función para simular el ascensor
-def simularAscensor(inicio, fin):
-    paso = 1 if inicio < fin else -1  # Determinar si sube o baja
-    palabra = ""
-    
-    # Bajar hasta el piso 1 para formar toda la palabra
-    for piso in range(inicio, fin + paso, paso):
-        if len(palabra) < len(PALABRA):
-            palabra += PALABRA[len(palabra)]  # Agregar una letra de la palabra
-        
-        dibujarAscensor(piso, palabra)
-
-        time.sleep(0.8)  # Pausa para la animación
-
-    print(f"{VERDE}\nHILEVADOR POR YORDI JIMENEZ Y GUSTAVO VALENZUELA!!!!\n{RESET}")
-    time.sleep(2)  # Pausa para que el usuario pueda leer el mensaje
-
-# Clase Elevador y lógica del elevador (igual que tu código original)
 class Elevador:
     def __init__(self, PISOS=5):
         self.capacidad = 5
@@ -73,15 +33,13 @@ def logicaElevador(elevador):
             # Verificar si hay solicitudes en el piso actual antes de abrir
             if elevador.piso_actual in elevador.solicitudes and elevador.solicitudes[elevador.piso_actual]:
                 elevador.puerta_abierta = True
-                print(f"\033[94m[ELEVADOR] Piso actual {elevador.piso_actual}: Puertas abiertas (solicitudes pendientes)\033[0m\n")
-                time.sleep(1)
+                print(f"\n[ELEVADOR] Piso actual {elevador.piso_actual}: Puertas abiertas (solicitudes pendientes)")
             else:
                 # Verificar si hay pasajeros que quieran bajar en este piso
                 pasajeros_bajando = any(piso == elevador.piso_actual for (_, piso) in elevador.pasajeros)
                 if pasajeros_bajando:
                     elevador.puerta_abierta = True
-                    print(f"\033[94m[ELEVADOR] Piso actual {elevador.piso_actual}: Puertas abiertas (pasajeros bajan)\033[0m\n")
-                    time.sleep(1)
+                    print(f"\n[ELEVADOR] Piso actual {elevador.piso_actual}: Puertas abiertas (pasajeros bajan)")
                 else:
                     elevador.puerta_abierta = False
             
@@ -92,8 +50,7 @@ def logicaElevador(elevador):
                 
                 # Cerrar puertas
                 elevador.puerta_abierta = False
-                print(f"\033[94m[ELEVADOR] Puertas cerradas. Pasajeros: {len(elevador.pasajeros)}\033[0m\n")
-                time.sleep(1)
+                print(f"[ELEVADOR] Puertas cerradas. Pasajeros: {len(elevador.pasajeros)}")
             
             if not elevador.funcionando:
                 break
@@ -134,8 +91,7 @@ def logicaElevador(elevador):
             # Mover elevador
             time.sleep(1)
             elevador.piso_actual += elevador.direccion
-            print(f"\033[94m[ELEVADOR] Movimiento al piso {elevador.piso_actual}, Dirección: {'ARRIBA' if elevador.direccion == 1 else 'ABAJO'}\033[0m\n")
-            time.sleep(1)
+            print(f"[ELEVADOR] Movimiento al piso {elevador.piso_actual}, Dirección: {'ARRIBA' if elevador.direccion == 1 else 'ABAJO'}")
             
             # Notificar movimiento
             elevador.condicion_movimiento.notify_all()
@@ -148,14 +104,12 @@ def logicaPersona(id_persona, elevador):
     while piso_destino == piso_actual:
         piso_destino = random.randint(0, elevador.PISOS-1)
     
-    print(f"[SOLICITUD] Persona {id_persona} desea ir al piso {piso_destino} desde el piso {piso_actual}\n")
-    time.sleep(1)  # Agregado para no mostrar tan rápido los mensajes iniciales
+    print(f"[SOLICITUD] Persona {id_persona} desea ir al piso {piso_destino} desde el piso {piso_actual}")
     
     # Registrar solicitud en el piso actual
     with elevador.lock_elevador:
         elevador.solicitudes[piso_actual].append(id_persona)
-        print(f"[REGISTRO] Persona {id_persona} registrada en piso {piso_actual}\n")
-    time.sleep(1)  # Agregado para espaciar los mensajes
+        print(f"[REGISTRO] Persona {id_persona} registrada en piso {piso_actual}")
     
     while piso_actual != piso_destino and elevador.funcionando:
         with elevador.lock_elevador:
@@ -171,8 +125,7 @@ def logicaPersona(id_persona, elevador):
                     # Abordar el elevador
                     elevador.solicitudes[piso_actual].remove(id_persona)
                     elevador.pasajeros.append((id_persona, piso_destino))
-                    print(f"\033[92m[ENTRADA] Persona {id_persona} ha subido al elevador en el piso {piso_actual}. Destino: {piso_destino}\033[0m\n")  # Color verde
-                    time.sleep(1)  # Agregado para espaciar los mensajes
+                    print(f"[ENTRADA] Persona {id_persona} ha subido al elevador en el piso {piso_actual}. Destino: {piso_destino}")
                     
                     # Esperar dentro del elevador
                     while True:
@@ -182,28 +135,22 @@ def logicaPersona(id_persona, elevador):
                                 elevador.pasajeros.remove((id_persona, piso_destino))
                                 elevador.semaforo_capacidad.release()
                                 piso_actual = piso_destino
-                                print(f"\033[91m[LLEGADA] Persona {id_persona} ha llegado a su destino en el piso {piso_destino}\033[0m\n")  # Color rojo
-                                time.sleep(1)  # Agregado para espaciar los mensajes
+                                print(f"[LLEGADA] Persona {id_persona} ha llegado a su destino en el piso {piso_destino}")
                             break
                         elevador.condicion_movimiento.wait()
                 else:
-                    print(f"\033[93m[AVISO] Persona {id_persona}. Elevador lleno, por favor espere...\033[0m\n")  # Color amarillo
-                    time.sleep(1)  # Agregado para espaciar los mensajes
+                    print(f"[AVISO] Persona {id_persona}. Elevador lleno, por favor espere...")
                     elevador.condicion_subida.wait()
             else:
                 # Si ya no está en la lista de espera, significa que ya abordó
                 elevador.condicion_subida.wait()
 
 if __name__ == "__main__":
-    # Mostrar animación inicial
-    simularAscensor(9, 1)
-    os.system("clear")  # Limpiar la pantalla después de la animación
-
     PISOS = 5
     personas = 10  # Aumentado para mejor demostración
     tiempo_simulacion = 60  # Aumentado para mejor demostración
     
-    print("\n[INICIO] Hilevador 1.0\n")
+    print("\n[INICIO] Hilevador 1.0")
     
     elevador = Elevador(PISOS)
     hilo_elevador = Thread(target=logicaElevador, args=(elevador,))
@@ -224,4 +171,4 @@ if __name__ == "__main__":
     
     for hilo in hilos_personas:
         hilo.join()
-    print("\n[FIN] Hilevador 1.0\n")
+    print("\n[FIN] Hilevador 1.0")
