@@ -32,21 +32,24 @@ pisos.
 
 ## Lenguaje y entorno
 
-Nuestro trabajo esta realizado en su totalidad con el lenguaje C, hacemos uso de OpenMP por lo que es importante mencionar que se tenga instalado:
-
-- GCC, verifica si tienes isntalado con el siguiente comando:
-
-> gcc --version
-
-- OpenMP, al momento de compilar se debera agregar esta biblioteca, como se observa en el siguiente ejemplo:
-
-> gcc -fopenmp programa.c -o programa
-
-Para el caso de nuestro codigo, se debe usar el siguiente comando:
-
-> aaaaaaaa
+Nuestro trabajo esta realizado en su totalidad con el lenguaje Python, usando al biblioteca threading.
 
 ## Estrategia de sincronizacion
 
-aaaa
+Usamos un semáforo acotado para poder controlar la cantidad de personas que subían al elevador, a su vez
+ocupamos dos condiciones para poder controlar la subida y bajada de los pasajeros (debe suceder cuando estén en el
+piso al que desean ir y cuando las puertas del elevador estén abiertas).
+
+## ¿Cómo evitamos la inanición?
+
+Usamos el algoritmo SCAN para prevenir que haya monopolio entre hilos, eventualmente atendiendo todas las solicitudes.
+
+SCAN es un algoritmo de planificación de disco (usado también en sistemas de elevadores) que funciona de manera similar a un elevador:
+
+- Barre en una dirección (generalmente de abajo hacia arriba primero).
+
+- Atiende todas las solicitudes que encuentra en su camino.
+
+- Cuando llega al extremo (piso más alto o más bajo), cambia de dirección y repite el proceso.
+
 

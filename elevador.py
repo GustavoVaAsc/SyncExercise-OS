@@ -185,8 +185,8 @@ def logicaPersona(id_persona, elevador):
                     
                     # Proceso de bajada
                     if elevador.piso_actual == piso_destino and elevador.puerta_abierta:
-                        elevador.pasajeros.remove((id_persona, piso_destino))
-                        elevador.semaforo_capacidad.release()
+                        #elevador.pasajeros.remove((id_persona, piso_destino))
+                        #elevador.semaforo_capacidad.release()
                         print(f"\033[91m[LLEGADA] Persona {id_persona} bajó en piso {elevador.piso_actual}\033[0m")
                         return
                 else:
