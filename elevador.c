@@ -67,7 +67,9 @@ void entrarMultiplex(Multiplex *m){
 // Salir del Multiplex
 void salirMultiplex(Multiplex *m){
     omp_set_lock(&m->lock);
-    m->conteo--;
+    if(m->conteo > 0) {
+        m->conteo--;
+    }
     omp_unset_lock(&m->lock);
 }
 
@@ -93,83 +95,127 @@ void liberarTorniquete(Torniquete *t){
     omp_unset_lock(&t->lock);
 }
 
-void logicaElevador(){
-    int direccion = 1; // 1 -> Arriba, -1 -> Abajo
+void logicaElevador() {
+    int direccion = 1;
     
-    while(true){
+    while(true) {
+        // Procesar solicitudes
         printf("Piso: %d -- Pasajeros: %d \n",piso_actual,capacidad.conteo);
-        
-
-        if(solicitudes[piso_actual] < 0){
+        if(solicitudes[piso_actual] < 0) {
             int bajando = -solicitudes[piso_actual];
-            if(bajando > capacidad.conteo) bajando  = capacidad.conteo;
+            omp_set_lock(&capacidad.lock);
+            bajando = (bajando > capacidad.conteo) ? capacidad.conteo : bajando;
+            capacidad.conteo -= bajando;
+            omp_unset_lock(&capacidad.lock);
             
-            for(int i=0; i<bajando; i++){
-                salirMultiplex(&capacidad);
-            }
-
             solicitudes[piso_actual] = 0;
-            printf("%d pasajeros bajaron en el piso %d \n",bajando,piso_actual);
+            printf("[BAJAN] %d pasajeros en piso %d\n", bajando, piso_actual);
         }
 
-        // Liberar el torniquete
+        // Permitir nuevas subidas
         liberarTorniquete(&torniquete);
+        usleep(500000);  // Tiempo en piso reducido a 0.5 segundos
 
-        sleep(1);
-
-        piso_actual+=direccion;
-        if(piso_actual <= 0){
-            piso_actual = 0;
-            direccion = 1;
-        }else if(piso_actual = PISOS-1){
-            piso_actual = PISOS-1;
-            direccion -1;
+        // Actualizar posición
+        int nuevo_piso = piso_actual + direccion;
+        if(nuevo_piso < 0 || nuevo_piso >= PISOS) {
+            direccion *= -1;
+            nuevo_piso = piso_actual + direccion;
         }
+        
+        #pragma omp atomic write
+        piso_actual = nuevo_piso;
     }
 }
 
-void logicaPasajero(int id){
-    int piso_origen = rand()%PISOS;
+void logicaPasajero(int id) {
+    int piso_origen = rand() % PISOS;
     int piso_destino;
-    do{
-        piso_destino = rand()%PISOS;
-    }while(piso_origen == piso_destino);
+    do {
+        piso_destino = rand() % PISOS;
+    } while(piso_origen == piso_destino);
 
-    printf("Solicitud: Pasajero: %d --- Piso de Origen: %d --- Piso destino:  %d \n", id,piso_origen,piso_destino);
+    printf("[NUEVO] Pasajero %d: %d → %d\n", id, piso_origen, piso_destino);
 
-    // Hacer solicitud para subir con atomic
-
+    // Registrar solicitud de subida
     #pragma omp atomic
     solicitudes[piso_origen]++;
 
-    while(piso_actual != piso_destino){
-        usleep(1000);
+    // Espera para subir
+    int ha_subido = 0;
+    while(!ha_subido) {
+        int current_floor;
+        #pragma omp atomic read
+        current_floor = piso_actual;
+        
+        if(current_floor == piso_origen) {
+            int puede_subir = 0;
+            #pragma omp critical (subida)
+            {
+                if(solicitudes[piso_origen] > 0 && capacidad.conteo < CAPACIDAD) {
+                    esperarTorniquete(&torniquete);
+                    entrarMultiplex(&capacidad);
+                    printf("[SUBIDA] Pasajero %d (%d → %d)\n", id, piso_origen, piso_destino);
+                    solicitudes[piso_origen]--;
+                    puede_subir = 1;
+                }
+            }
+            if(puede_subir) {
+                ha_subido = 1;
+            }
+        }
+        usleep(50000);
     }
 
-    salirMultiplex(&capacidad);
-    printf("Pasajero: %d baja en el piso %d \n",id, piso_destino);
+    // Registrar solicitud de bajada
+    #pragma omp atomic
+    solicitudes[piso_destino]--;
+
+    // Espera para bajar
+    int ha_bajado = 0;
+    while(!ha_bajado) {
+        int current_floor;
+        #pragma omp atomic read
+        current_floor = piso_actual;
+        
+        if(current_floor == piso_destino) {
+            #pragma omp critical (bajada)
+            {
+                salirMultiplex(&capacidad);
+                printf("[BAJADA] Pasajero %d en piso %d\n", id, piso_destino);
+            }
+            ha_bajado = 1;
+        }
+        usleep(50000);
+    }
 }
 
-int main(){
+int main() {
+    for(int i = 0; i < PISOS; i++) {
+        solicitudes[i] = 0;
+    }
     EstructurasSincronizacion();
     srand(time(NULL));
 
-    #pragma omp parallel sections num_threads(2)
-    {
-        #pragma omp section
-        {
-            logicaElevador();
-        }
+    // Configuración de hilos
+    omp_set_nested(1);
+    omp_set_num_threads(PERSONAS + 1);  // Pasajeros + elevador
 
-        #pragma omp section
+    #pragma omp parallel
+    {
+        #pragma omp single nowait
         {
-            #pragma omp parallel for num_threads(PERSONAS)
-            for(int i=0; i<20; i++){
+            // Hilo del elevador
+            #pragma omp task
+            logicaElevador();
+
+            // Generar pasajeros
+            #pragma omp taskloop num_tasks(PERSONAS)
+            for(int i = 0; i < 20; i++) {
                 logicaPasajero(i);
-                sleep(rand()%3 +1);
+                usleep(rand() % 300000 + 100000); // Espera aleatoria 0.1-0.4s
             }
         }
     }
-
     return 0;
 }
