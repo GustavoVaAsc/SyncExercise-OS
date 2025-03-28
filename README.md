@@ -4,8 +4,6 @@ Entrega de la primera tarea de la materia Sistemas Operativos Semestre 2025-2 po
 
 ## Problema
 
-> Comentario para el profesor: Profe, estamos colocando de nuevo el enunciado del problema porque el readme que usted esta viendo para nuestra entrega es el mismo que colocamos para el repositorio que creamos para la tarea 😉
-
 Decidimos optar por el problema "El elevador" el cual plantea lo siguiente:
 
 - El elevador de la Facultad se descompone demasiado, porque
